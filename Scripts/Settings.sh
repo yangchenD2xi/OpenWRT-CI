@@ -5,7 +5,7 @@
 #移除luci-app-attendedsysupgrade
 find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "/attendedsysupgrade/d" {} +
 #修改默认主题
-find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" {} +
+# find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" {} +
 #修改immortalwrt.lan关联IP
 find ./feeds/luci/modules/luci-mod-system/ -type f -name "flash.js" -exec sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" {} +
 #添加编译日期标识
@@ -25,11 +25,37 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
 #配置文件修改
-echo "CONFIG_PACKAGE_luci=y" >> ./.config
-echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-$WRT_THEME=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci=y" >> ./.config
+# echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-app-$WRT_THEME=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> ./.config
+
+
+# LuCI 基础组件与中文支持
+cat >> ./.config <<'EOF'
+CONFIG_PACKAGE_luci=y
+CONFIG_LUCI_LANG_zh_Hans=y
+CONFIG_PACKAGE_luci-theme-aurora=y
+EOF
+
+# 首次启动时设置 Aurora 为默认主题
+THEME_DIR="./package/base-files/files/etc/uci-defaults"
+mkdir -p "$THEME_DIR"
+
+cat > "$THEME_DIR/99-set-aurora-theme" <<'EOF'
+#!/bin/sh
+
+if [ -d /www/luci-static/aurora ]; then
+    uci set luci.main.mediaurlbase='/luci-static/aurora'
+    uci commit luci
+fi
+
+exit 0
+EOF
+
+chmod +x "$THEME_DIR/99-set-aurora-theme"
+
 
 #引入私有扩展配置
 if [ -f "$GITHUB_WORKSPACE/Config/PRIVATE.txt" ]; then
