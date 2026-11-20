@@ -77,3 +77,58 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 		echo "qualcommax set up nowifi successfully!"
 	fi
 fi
+
+# ==================================================
+# CPU / PPE / TCP / UDP 硬件卸载监控
+# 固件首次启动时自动安装
+# ==================================================
+
+mkdir -p ./package/base-files/files/etc/uci-defaults
+
+cat > ./package/base-files/files/etc/uci-defaults/99-cpuusage-monitor <<'INIT_SCRIPT'
+#!/bin/sh
+
+# 检查原始 cpuusage 是否存在
+[ -x /sbin/cpuusage ] || exit 0
+
+# 备份原始 CPU/PPE 统计脚本
+if [ ! -f /sbin/cpuusage.original ]; then
+    cp -p /sbin/cpuusage /sbin/cpuusage.original || exit 1
+fi
+
+# 安装增强版统计脚本
+cat > /sbin/cpuusage.new <<'CPU_SCRIPT'
+#!/bin/sh
+
+# 保留原来的 CPU / PPE 数据
+BASE=$(/sbin/cpuusage.original)
+
+# 读取 TCP、UDP 和硬件卸载连接数量
+if [ -r /proc/net/nf_conntrack ]; then
+    STATS=$(awk '
+    $3=="tcp" {tcp++}
+    $3=="udp" {udp++}
+    $3=="tcp" && /HW_OFFLOAD/ {tcp_hw++}
+    $3=="udp" && /HW_OFFLOAD/ {udp_hw++}
+    END {
+        printf "TCP: %d (HW: %d) UDP: %d (HW: %d)", \
+            tcp, tcp_hw, udp, udp_hw
+    }
+    ' /proc/net/nf_conntrack)
+else
+    STATS="TCP/UDP: unavailable"
+fi
+
+printf '%s %s\n' "$BASE" "$STATS"
+CPU_SCRIPT
+
+chmod 755 /sbin/cpuusage.new
+mv -f /sbin/cpuusage.new /sbin/cpuusage
+
+exit 0
+INIT_SCRIPT
+
+chmod 755 ./package/base-files/files/etc/uci-defaults/99-cpuusage-monitor
+
+echo "CPU/PPE/TCP/UDP monitor integration ready."
+
