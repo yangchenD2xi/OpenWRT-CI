@@ -176,7 +176,6 @@ jobs:
           cd ./wrt/
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
-          python3 "$GITHUB_WORKSPACE/.github/scripts/patch_turboacc_ui.py"
           $GITHUB_WORKSPACE/Scripts/Handles.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
 
