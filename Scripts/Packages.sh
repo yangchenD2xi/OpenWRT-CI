@@ -73,18 +73,20 @@ UPDATE_PACKAGE "luci-app-adguardhome" "kenzok8/openwrt-packages" "master" "pkg"
 UPDATE_PACKAGE "luci-app-passwall" "kenzok8/small" "master" "pkg" 
 UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
 # UPDATE_PACKAGE "luci-app-nss" "qosmio/nss-packages" "main"
-# NSS 状态监控 LuCI 界面
-# 只读取 NSS 状态，不修改硬件加速配置
 
+# 删除可能存在的旧版 NSS LuCI 插件
 rm -rf ./package/luci-app-nss
-
+# 同时清理 feeds 中可能存在的同名插件
+find ./feeds/luci ./feeds/packages \
+  -type d -name "luci-app-nss" -prune \
+  -exec rm -rf {} + 2>/dev/null || true
+  # 下载 NSS 状态监控插件
 git clone --depth=1 --single-branch \
   --branch master \
   https://github.com/yduke/luci-app-nss.git \
   ./package/luci-app-nss
-  # 检查插件源码是否下载成功
+# 确认插件源码存在
 test -f ./package/luci-app-nss/Makefile || exit 1
-
 echo "NSS LuCI status plugin ready."
 
 #更新软件包版本
