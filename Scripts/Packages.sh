@@ -72,7 +72,20 @@ UPDATE_PACKAGE "aurora" "eamonxg/luci-theme-aurora" "master"
 UPDATE_PACKAGE "luci-app-adguardhome" "kenzok8/openwrt-packages" "master" "pkg" 
 UPDATE_PACKAGE "luci-app-passwall" "kenzok8/small" "master" "pkg" 
 UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
-UPDATE_PACKAGE "luci-app-nss" "qosmio/nss-packages" "main"
+# UPDATE_PACKAGE "luci-app-nss" "qosmio/nss-packages" "main"
+# NSS 状态监控 LuCI 界面
+# 只读取 NSS 状态，不修改硬件加速配置
+
+rm -rf ./package/luci-app-nss
+
+git clone --depth=1 --single-branch \
+  --branch master \
+  https://github.com/yduke/luci-app-nss.git \
+  ./package/luci-app-nss
+  # 检查插件源码是否下载成功
+test -f ./package/luci-app-nss/Makefile || exit 1
+
+echo "NSS LuCI status plugin ready."
 
 #更新软件包版本
 UPDATE_VERSION() {
