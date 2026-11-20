@@ -31,6 +31,16 @@ UPDATE_PACKAGE() {
 		fi
 	done
 
+		# 克隆 GitHub 仓库
+	git clone --depth=1 --single-branch --branch $PKG_BRANCH "https://github.com/$PKG_REPO.git" $REPO_PATH
+
+	# 处理克隆的仓库
+	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
+		find $REPO_PATH/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./package \;
+		rm -rf $REPO_PATH
+	fi
+}
+
 # 调用示例
 # UPDATE_PACKAGE "OpenAppFilter" "destan19/OpenAppFilter" "master" "" "custom_name1 custom_name2"
 # UPDATE_PACKAGE "open-app-filter" "destan19/OpenAppFilter" "master" "" "luci-app-appfilter oaf" 这样会把原有的open-app-filter，luci-app-appfilter，oaf相关组件删除，不会出现coremark错误。
