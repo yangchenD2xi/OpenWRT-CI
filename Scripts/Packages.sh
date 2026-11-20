@@ -75,29 +75,35 @@ UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
 # UPDATE_PACKAGE "luci-app-nss" "qosmio/nss-packages" "main"
 
 # 删除可能存在的旧版 NSS LuCI 插件
-rm -rf ./package/luci-app-nss
+# rm -rf ./package/luci-app-nss
 # 同时清理 feeds 中可能存在的同名插件
-find ./feeds/luci ./feeds/packages \
-  -type d -name "luci-app-nss" -prune \
-  -exec rm -rf {} + 2>/dev/null || true
+# find ./feeds/luci ./feeds/packages \
+#  -type d -name "luci-app-nss" -prune \
+#  -exec rm -rf {} + 2>/dev/null || true
   # 下载 NSS 状态监控插件
-git clone --depth=1 --single-branch \
-  --branch master \
-  https://github.com/yduke/luci-app-nss.git \
-  ./package/luci-app-nss
-# 确认插件源码存在
-test -f ./package/luci-app-nss/Makefile || exit 1
-echo "NSS LuCI status plugin ready."
-
-# QSDK NSS 加速状态监控
-# rm -rf ./package/luci-app-qsdk-accel
 # git clone --depth=1 --single-branch \
-#  --branch main \
-#  https://github.com/wwng2333/luci-app-qsdk-accel.git \
-# ./package/luci-app-qsdk-accel
-# 检查软件包 Makefile
-# test -f ./package/luci-app-qsdk-accel/Makefile || exit 1
-# echo "QSDK Acceleration LuCI plugin ready."
+#  --branch master \
+#  https://github.com/yduke/luci-app-nss.git \
+#  ./package/luci-app-nss
+# 确认插件源码存在
+# test -f ./package/luci-app-nss/Makefile || exit 1
+# echo "NSS LuCI status plugin ready."
+
+# QSDK NSS 加速状态监控 - IPQ60XX 适配版
+# 只监控 NSS / PPE，不修改驱动和防火墙
+echo "Installing IPQ60XX QSDK monitor..."
+# 删除旧版插件
+rm -rf ./package/luci-app-qsdk-accel
+# 解压适配版插件
+unzip -q \
+  "$GITHUB_WORKSPACE/Config/luci-app-qsdk-accel-ipq60xx-monitor.zip" \
+  -d ./package/
+# 检查插件是否存在
+if [ ! -f ./package/luci-app-qsdk-accel/Makefile ]; then
+    echo "ERROR: QSDK monitor package not found!"
+    exit 1
+fi
+echo "QSDK IPQ60XX monitor ready."
 
 #更新软件包版本
 UPDATE_VERSION() {
