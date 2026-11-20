@@ -75,12 +75,8 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get -yqq purge firefox
-          sudo apt-get -yqq update
-          sudo apt-get -yqq full-upgrade
-          sudo apt-get -yqq autoremove --purge
-          sudo apt-get -yqq autoclean
-          sudo apt-get -yqq clean
+          # 托管 Runner 不做整机升级，仅刷新软件包索引
+          sudo apt-get update -qq
 
           sudo apt-get install -y --no-install-recommends \
             bc bison build-essential bzip2 ca-certificates ccache clang \
@@ -91,11 +87,9 @@ jobs:
             python3-dev python3-packaging python3-pyelftools python3-setuptools qemu-utils rsync swig \
             unzip wget xz-utils zlib1g-dev zstd
 
-          sudo timedatectl set-timezone "Asia/Shanghai"
-
           sudo mkdir -p /mnt/build_wrt
           sudo chown $USER:$USER /mnt/build_wrt
-          sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+          ln -s /mnt/build_wrt "$GITHUB_WORKSPACE/wrt"
 
       - name: Initialization Values
         id: initialize-values
@@ -141,7 +135,12 @@ jobs:
 
       - name: Check Scripts
         run: |
-          find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+          # 只检查真正会运行的 shell 脚本，不对配置 txt 统一 chmod
+          find Scripts .github/scripts -type f -name '*.sh' -exec dos2unix {} +
+          find Scripts .github/scripts -type f -name '*.sh' -exec chmod +x {} +
+          bash -n Scripts/Packages.sh
+          bash -n Scripts/Handles.sh
+          bash -n Scripts/Settings.sh
 
       - name: Restore Build Cache
         id: cache-restore
@@ -193,7 +192,8 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Settings.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
 
-          make defconfig -j$(nproc) && make clean -j$(nproc)
+          # 让 OpenWrt 自行判断增量依赖，避免每次清理构建结果
+          make defconfig
 
       - name: Prepare Rust Toolchain
         if: ${{ !inputs.WRT_TEST }}
@@ -278,20 +278,25 @@ jobs:
 
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
 
-            make clean -j$(nproc)
           fi
 
+      - name: Upload Test Config
+        if: ${{ inputs.WRT_TEST }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-config-${{env.WRT_CONFIG}}-${{github.run_attempt}}
+          path: ./wrt/upload/Config-*.txt
+          retention-days: 7
+
       - name: Release Firmware
+        if: ${{ !inputs.WRT_TEST }}
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
-            这是个平台固件包，内含多个设备！
-            请注意选择你需要的设备固件！
-            不要问，刷就完事了！
-
-            全系带开源硬件加速，别问了！
+            QCA IPQ60XX-WIFI-NO 固件，请核对设备型号后刷入。
+            固件编译参数与插件列表见下方。
 
             源码：${{env.WRT_REPO}}
             分支：${{env.WRT_BRANCH}}
@@ -301,10 +306,8 @@ jobs:
             平台：${{env.WRT_TARGET}}
 
             登录地址：${{env.WRT_IP}}
-            登录密码：${{env.WRT_PW}}
 
             WIFI名称：${{env.WRT_SSID}}
-            WIFI密码：${{env.WRT_WORD}}
 
             内核版本：${{env.WRT_KVER}}
             插件列表：${{env.WRT_LIST}}
